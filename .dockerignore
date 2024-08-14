@@ -1,0 +1,9 @@
+/.bsp/
+target/
+.idea
+.git
+.gitignore
+Dockerfile
+run.sh
+build.sh
+version.sh

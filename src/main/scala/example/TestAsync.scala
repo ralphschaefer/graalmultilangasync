@@ -17,18 +17,21 @@ class TestAsync(input:String) extends Thenable {
     Future {
       val ctx: Option[JsContextPool.Ctx] = JsContextPool.get
       val res: Option[Try[String]] = ctx.map { c =>
-        Thread.sleep(1200)
+        Thread.sleep(1500)
         new RunJS(c.context).run(input)
       }
       res match {
         case Some(Success(r)) =>
           interopThread.enqueue(Resolve(onResolve,r))
+          // onResolve.executeVoid(r)  // cause error for multiple threads
           JsContextPool.release(ctx.get)
         case Some(Failure(exception)) =>
           interopThread.enqueue(Reject(onReject,exception))
+          // onReject.executeVoid(exception)
           JsContextPool.release(ctx.get)
         case None =>
           interopThread.enqueue(Reject(onReject,new Exception("new context could not be acquired")))
+          // onReject.executeVoid(new Exception("new context could not be acquired"))
       }
       Thread.sleep(5000)
     }
@@ -43,11 +46,11 @@ object TestAsync {
   implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(executorService)
 
   class RunJS(context: Context) {
-    def parseJson(jString: String): Value = context.eval("js", "JSON").invokeMember("parse", jString)
+    private def parseJson(jString: String): Value = context.eval("js", "JSON").invokeMember("parse", jString)
 
-    def stringify(v: Value): String = context.eval("js", "JSON").invokeMember("stringify", v).asString()
+    private def stringify(v: Value): String = context.eval("js", "JSON").invokeMember("stringify", v).asString()
 
-    def execute(in: Value): Value = {
+    private def execute(in: Value): Value = {
       val extract = context.eval("js", "(function(o,item) {return o[item];})")
       val js = context.eval("js", "(" + extract.execute(in, "fn").asString() + ")")
       js.execute(extract.execute(in, "input"))
@@ -63,11 +66,13 @@ object TestAsync {
   case class Resolve(to: Value, res: String) extends QElem
   case class Reject(to: Value, t: Throwable) extends QElem
 
+  // communication thread for destination context
+  // only one thread is allowed to make request to destination Context
   class InteropThread extends Thread {
 
     import scala.collection.mutable._
 
-    def enqueue(e: QElem) = synchronized{
+    def enqueue(e: QElem): Unit = synchronized{
       q.enqueue(e)
     }
 

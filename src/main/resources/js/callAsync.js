@@ -1,5 +1,5 @@
 
-(async function() {
+(async function() {   // for this usecase here async is optional
 
     let input = {
         input: {

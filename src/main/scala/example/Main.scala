@@ -12,6 +12,8 @@ import scala.util.{Failure, Success}
 
 object Main extends App {
 
+  println("Start ...")
+
   val start = System.currentTimeMillis()
 
   val j = scala.io.Source.fromResource("js/callAsync.js").mkString("")
@@ -41,7 +43,7 @@ object Main extends App {
       println("error :" + exception.getMessage)
   }
 
-  println(s"execution time = ${(System.currentTimeMillis() - start)*1.0 / 1000 }")
+  println(s"execution time = ${(System.currentTimeMillis() - start)*1.0 / 1000 }s")
 
 }
 

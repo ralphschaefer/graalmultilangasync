@@ -14,7 +14,7 @@ trait JsContextPool {
   val engine = Engine.newBuilder().build()
 
   lazy private val contexts: Array[Ctx] = (for (i <- 0 until poolSize) yield {
-    val ctx = Context.newBuilder("js")
+    val ctx: Context = Context.newBuilder("js")
         .allowHostClassLookup(((clazz:String) => true).asJava)
         .allowHostAccess(HostAccess.ALL)
         .engine(engine)

@@ -1,6 +1,7 @@
 
 (async function() {   // for this usecase here async is optional
 
+
     let input = {
         input: {
             item: "N/A"

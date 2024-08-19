@@ -22,15 +22,15 @@ class TestAsync(input:String) extends Thenable {
       }
       res match {
         case Some(Success(r)) =>
-          interopThread.enqueue(Resolve(onResolve,r))
+          interopThread.enqueue(Resolve(onResolve, ctx.get.context, qr))
           // onResolve.executeVoid(r)  // cause error for multiple threads
           JsContextPool.release(ctx.get)
         case Some(Failure(exception)) =>
-          interopThread.enqueue(Reject(onReject,exception))
+          interopThread.enqueue(Reject(onReject, ctx.get.context, exception))
           // onReject.executeVoid(exception)
           JsContextPool.release(ctx.get)
         case None =>
-          interopThread.enqueue(Reject(onReject,new Exception("new context could not be acquired")))
+          interopThread.enqueue(Reject(onReject, ctx.get.context, new Exception("new context could not be acquired")))
           // onReject.executeVoid(new Exception("new context could not be acquired"))
       }
       Thread.sleep(5000)
@@ -62,9 +62,12 @@ object TestAsync {
     }
   }
 
-  trait QElem
-  case class Resolve(to: Value, res: String) extends QElem
-  case class Reject(to: Value, t: Throwable) extends QElem
+  trait QElem {
+    val to: Value
+    val ctx: Context
+  }
+  case class Resolve(to: Value, ctx: Context, res: String) extends QElem
+  case class Reject(to: Value, ctx: Context, t: Throwable) extends QElem
 
   // communication thread for destination context
   // only one thread is allowed to make request to destination Context
@@ -80,10 +83,14 @@ object TestAsync {
 
     override def run() = while (true) {
       Try(q.dequeue()) match {
-        case Success(Resolve(to, res)) =>
+        case Success(Resolve(to, ctx, res)) =>
+          ctx.enter()
           to.executeVoid(res)
-        case Success(Reject(to, t)) =>
+          ctx.leave()
+        case Success(Reject(to, ctx, t)) =>
+          ctx.enter()
           to.executeVoid(t)
+          ctx.leave()
         case _ =>
           Thread.sleep(20)
       }
